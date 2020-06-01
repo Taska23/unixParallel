@@ -1,19 +1,32 @@
 package lab_02;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Random;
 
-
+/** Поток-вычислитель группы ячеек матрицы. */
 class MultiplierThread extends Thread
 {
-
+    /** Первая (левая) матрица. */
     private final int[][] firstMatrix;
+    /** Вторая (правая) матрица. */
     private final int[][] secondMatrix;
+    /** Результирующая матрица. */
     private final int[][] resultMatrix;
+    /** Начальный индекс. */
     private final int firstIndex;
+    /** Конечный индекс. */
     private final int lastIndex;
+    /** Число членов суммы при вычислении значения ячейки. */
     private final int sumLength;
 
+    /**
+     * @param firstMatrix  Первая (левая) матрица.
+     * @param secondMatrix Вторая (правая) матрица.
+     * @param resultMatrix Результирующая матрица.
+     * @param firstIndex   Начальный индекс (ячейка с этим индексом вычисляется).
+     * @param lastIndex    Конечный индекс (ячейка с этим индексом не вычисляется).
+     */
     public MultiplierThread(final int[][] firstMatrix,
                             final int[][] secondMatrix,
                             final int[][] resultMatrix,
@@ -29,6 +42,11 @@ class MultiplierThread extends Thread
         sumLength = secondMatrix.length;
     }
 
+    /**Вычисление значения в одной ячейке.
+     *
+     * @param row Номер строки ячейки.
+     * @param col Номер столбца ячейки.
+     */
     private void calcValue(final int row, final int col)
     {
         int sum = 0;
@@ -37,12 +55,13 @@ class MultiplierThread extends Thread
         resultMatrix[row][col] = sum;
     }
 
+    /** Рабочая функция потока. */
     @Override
     public void run()
     {
         System.out.println("Thread " + getName() + " started. Calculating cells from " + firstIndex + " to " + lastIndex + "...");
 
-        final int colCount = secondMatrix[0].length;
+        final int colCount = secondMatrix[0].length;  // Число столбцов результирующей матрицы.
         for (int index = firstIndex; index < lastIndex; ++index)
             calcValue(index / colCount, index % colCount);
 
@@ -52,23 +71,37 @@ class MultiplierThread extends Thread
 
 class Main
 {
+    /** Заполнение матрицы случайными числами.
+     *
+     * @param matrix Заполняемая матрица.
+     */
     private static void randomMatrix(final int[][] matrix)
     {
-        final Random random = new Random();
+        final Random random = new Random();  // Генератор случайных чисел.
 
-        for (int row = 0; row < matrix.length; ++row)
-            for (int col = 0; col < matrix[row].length; ++col)
-                matrix[row][col] = random.nextInt(100);
+        for (int row = 0; row < matrix.length; ++row)           // Цикл по строкам матрицы.
+            for (int col = 0; col < matrix[row].length; ++col)  // Цикл по столбцам матрицы.
+                matrix[row][col] = random.nextInt(100);         // Случайное число от 0 до 100.
     }
 
+    //
 
-
+    /** Вывод матрицы в файл.
+     * Производится выравнивание значений для лучшего восприятия.
+     *
+     * @param fileWriter Объект, представляющий собой файл для записи.
+     * @param matrix Выводимая матрица.
+     * @throws IOException
+     */
     private static void printMatrix(final FileWriter fileWriter,
                                     final int[][] matrix) throws IOException
     {
-        boolean hasNegative = false;
-        int     maxValue    = 0;      for (final int[] row : matrix) {
-            for (final int element : row) {
+        boolean hasNegative = false;  // Признак наличия в матрице отрицательных чисел.
+        int     maxValue    = 0;      // Максимальное по модулю число в матрице.
+
+        // Вычисляем максимальное по модулю число в матрице и проверяем на наличие отрицательных чисел.
+        for (final int[] row : matrix) {  // Цикл по строкам матрицы.
+            for (final int element : row) {  // Цикл по столбцам матрицы.
                 int temp = element;
                 if (element < 0) {
                     hasNegative = true;
@@ -79,23 +112,31 @@ class Main
             }
         }
 
-
-        int len = Integer.toString(maxValue).length() + 1;
+        // Вычисление длины позиции под число.
+        int len = Integer.toString(maxValue).length() + 1;  // Одно знакоместо под разделитель (пробел).
         if (hasNegative)
-            ++len;
+            ++len;  // Если есть отрицательные, добавляем знакоместо под минус.
 
-
+        // Построение строки формата.
         final String formatString = "%" + len + "d";
 
-
-        for (final int[] row : matrix) {
-            for (final int element : row)
+        // Вывод элементов матрицы в файл.
+        for (final int[] row : matrix) {  // Цикл по строкам матрицы.
+            for (final int element : row)  // Цикл по столбцам матрицы.
                 fileWriter.write(String.format(formatString, element));
 
-            fileWriter.write("\n");
+            fileWriter.write("\n");  // Разделяем строки матрицы переводом строки.
         }
     }
 
+    /**
+     * Вывод трёх матриц в файл. Файл будет перезаписан.
+     *
+     * @param fileName     Имя файла для вывода.
+     * @param firstMatrix  Первая матрица.
+     * @param secondMatrix Вторая матрица.
+     * @param resultMatrix Результирующая матрица.
+     */
     private static void printAllMatrix(final String fileName,
                                        final int[][] firstMatrix,
                                        final int[][] secondMatrix,
@@ -116,16 +157,22 @@ class Main
         }
     }
 
+    /** Однопоточное умножение матриц.
+     *
+     * @param firstMatrix  Первая матрица.
+     * @param secondMatrix Вторая матрица.
+     * @return Результирующая матрица.
+     */
     private static int[][] multiplyMatrix(final int[][] firstMatrix,
                                           final int[][] secondMatrix)
     {
-        final int rowCount = firstMatrix.length;
-        final int colCount = secondMatrix[0].length;
-        final int sumLength = secondMatrix.length;
-        final int[][] result = new int[rowCount][colCount];
+        final int rowCount = firstMatrix.length;             // Число строк результирующей матрицы.
+        final int colCount = secondMatrix[0].length;         // Число столбцов результирующей матрицы.
+        final int sumLength = secondMatrix.length;           // Число членов суммы при вычислении значения ячейки.
+        final int[][] result = new int[rowCount][colCount];  // Результирующая матрица.
 
-        for (int row = 0; row < rowCount; ++row) {
-            for (int col = 0; col < colCount; ++col) {
+        for (int row = 0; row < rowCount; ++row) {  // Цикл по строкам матрицы.
+            for (int col = 0; col < colCount; ++col) {  // Цикл по столбцам матрицы.
                 int sum = 0;
                 for (int i = 0; i < sumLength; ++i)
                     sum += firstMatrix[row][i] * secondMatrix[i][col];
@@ -136,26 +183,33 @@ class Main
         return result;
     }
 
-
+    /** Многопоточное умножение матриц.
+     *
+     * @param firstMatrix  Первая (левая) матрица.
+     * @param secondMatrix Вторая (правая) матрица.
+     * @param threadCount Число потоков.
+     * @return Результирующая матрица.
+     */
     private static int[][] multiplyMatrixMT(final int[][] firstMatrix,
                                             final int[][] secondMatrix,
                                             int threadCount)
     {
         assert threadCount > 0;
 
-        final int rowCount = firstMatrix.length;
-        final int colCount = secondMatrix[0].length;
-        final int[][] result = new int[rowCount][colCount];
+        final int rowCount = firstMatrix.length;             // Число строк результирующей матрицы.
+        final int colCount = secondMatrix[0].length;         // Число столбцов результирующей матрицы.
+        final int[][] result = new int[rowCount][colCount];  // Результирующая матрица.
 
-        final int cellsForThread = (rowCount * colCount) / threadCount;
-        int firstIndex = 0;
-        final MultiplierThread[] multiplierThreads = new MultiplierThread[threadCount];
+        final int cellsForThread = (rowCount * colCount) / threadCount;  // Число вычисляемых ячеек на поток.
+        int firstIndex = 0;  // Индекс первой вычисляемой ячейки.
+        final MultiplierThread[] multiplierThreads = new MultiplierThread[threadCount];  // Массив потоков.
 
-
+        // Создание и запуск потоков.
         for (int threadIndex = threadCount - 1; threadIndex >= 0; --threadIndex) {
-            int lastIndex = firstIndex + cellsForThread;
+            int lastIndex = firstIndex + cellsForThread;  // Индекс последней вычисляемой ячейки.
             if (threadIndex == 0) {
-
+                /* Один из потоков должен будет вычислить не только свой блок ячеек,
+                   но и остаток, если число ячеек не делится нацело на число потоков. */
                 lastIndex = rowCount * colCount;
             }
             multiplierThreads[threadIndex] = new MultiplierThread(firstMatrix, secondMatrix, result, firstIndex, lastIndex);
@@ -163,7 +217,7 @@ class Main
             firstIndex = lastIndex;
         }
 
-
+        // Ожидание завершения потоков.
         try {
             for (final MultiplierThread multiplierThread : multiplierThreads)
                 multiplierThread.join();
@@ -175,27 +229,27 @@ class Main
         return result;
     }
 
-
+    /** Число строк первой матрицы. */
     final static int FIRST_MATRIX_ROWS  = 1000;
-
+    /** Число столбцов первой матрицы. */
     final static int FIRST_MATRIX_COLS  = 1000;
-
+    /** Число строк второй матрицы (должно совпадать с числом столбцов первой матрицы). */
     final static int SECOND_MATRIX_ROWS = FIRST_MATRIX_COLS;
-
+    /** Число столбцов второй матрицы. */
     final static int SECOND_MATRIX_COLS = 1000;
 
     public static void main(String[] args)
     {
-        final int[][] matrix1  = new int[FIRST_MATRIX_ROWS][FIRST_MATRIX_COLS];
-        final int[][] matrix2 = new int[SECOND_MATRIX_ROWS][SECOND_MATRIX_COLS];
+        final int[][] firstMatrix  = new int[FIRST_MATRIX_ROWS][FIRST_MATRIX_COLS];    // Первая (левая) матрица.
+        final int[][] secondMatrix = new int[SECOND_MATRIX_ROWS][SECOND_MATRIX_COLS];  // Вторая (правая) матрица.
 
-        randomMatrix(matrix1);
-        randomMatrix(matrix2);
+        randomMatrix(firstMatrix);
+        randomMatrix(secondMatrix);
 
-        final int[][] resultMatrixMT = multiplyMatrixMT(matrix1, matrix2, Runtime.getRuntime().availableProcessors());
+        final int[][] resultMatrixMT = multiplyMatrixMT(firstMatrix, secondMatrix, Runtime.getRuntime().availableProcessors());
 
-
-        final int[][] resultMatrix = multiplyMatrix(matrix1, matrix2);
+        // Проверка многопоточных вычислений с помощью однопоточных.
+        final int[][] resultMatrix = multiplyMatrix(firstMatrix, secondMatrix);
 
         for (int row = 0; row < FIRST_MATRIX_ROWS; ++row) {
             for (int col = 0; col < SECOND_MATRIX_COLS; ++col) {
@@ -206,6 +260,6 @@ class Main
             }
         }
 
-        printAllMatrix("Matrix.txt", matrix1, matrix2, resultMatrixMT);
+        printAllMatrix("Matrix.txt", firstMatrix, secondMatrix, resultMatrixMT);
     }
 }
